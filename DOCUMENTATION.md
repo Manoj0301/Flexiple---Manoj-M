@@ -2,7 +2,32 @@
 
 This document explains what the product does for a recruiter, and how the application carries that work from a sentence to a frozen shortlist.
 
-The code lives in this repository, managed as the Flexiple sourcing assignment for Manoj M.
+The code lives in this repository, managed as the Flexiple sourcing assignment for Manoj M. Use the **Development** branch. The API runs in Docker. The UI runs with the Vite dev server.
+
+## Setup
+
+1. Clone the repository and run `git switch Development`.
+2. Copy `backend/.env.example` to `backend/.env`.
+3. Replace `OPENAI_API_KEY=sk-your-openai-api-key` with a real key from [platform.openai.com/api-keys](https://platform.openai.com/api-keys). A ChatGPT login is not this key. Do not commit `backend/.env`.
+4. Start the backend from the repository root. Port 8001 must be free.
+
+```bash
+docker compose up --build
+```
+
+The API container reads `OPENAI_API_KEY` from `backend/.env` and listens on http://127.0.0.1:8001. Leave this terminal running. After a key change, run `docker compose up --build --force-recreate`. Stop with Ctrl+C, then `docker compose down`.
+
+5. Start the frontend in a second terminal. Node.js 20 or newer is required. Port 5173 must be free.
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+6. Open http://127.0.0.1:5173. Vite proxies `/api` to the backend on port 8001.
+
+Tests, from the repository root: `docker compose run --rm backend pytest`. They use a fake model and do not call OpenAI.
 
 ## Business flow
 
@@ -57,17 +82,20 @@ The system is a modular monolith: a FastAPI service and a React client. The brow
 
 ```text
 Recruiter
-  -> React (Vite, port 5173)
-    -> /api proxied to FastAPI (port 8001)
+  -> React dev server (npm run dev, port 5173)
+    -> /api proxied to the API container (docker compose up --build, port 8001)
       -> OpenAI Responses API (structured output)
       -> local filter and evidence checks
       -> in-memory session
 ```
 
+`docker compose up --build` starts only the API. `npm run dev` starts the UI and proxies `/api` to http://127.0.0.1:8001.
+
 ### Repository layout
 
 | Path | Responsibility |
 | --- | --- |
+| `docker-compose.yml` | Runs the API with `docker compose up --build` |
 | `frontend/` | Search workspace, filters, cards, shortlist, messages, analytics |
 | `backend/app/main.py` | HTTP routes, CORS, error shape, env load |
 | `backend/app/service.py` | Session loop: parse, score, edit, refine, freeze, retry |
@@ -134,11 +162,11 @@ The workspace is one screen.
 - Match toggles Shortlisted locally. That set is not a separate backend object. Refine is what sends those marks to the server.
 - Empty filters, a scoring result with nobody cited, a model error, and the frozen shortlist each have their own state. The last good cards are not cleared on error.
 
-Vite proxies `/api` to `http://127.0.0.1:8001`.
+`npm run dev` proxies `/api` to the API container at http://127.0.0.1:8001.
 
 ### Tests
 
-From `backend`, `pytest` runs the filter aliases, citation checks, positional feedback mapping, and the service loop against a fake model. Those tests do not call OpenAI.
+`docker compose run --rm backend pytest` runs the filter aliases, citation checks, positional feedback mapping, and the service loop against a fake model. Those tests do not call OpenAI.
 
 ### What this submission leaves out
 

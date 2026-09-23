@@ -6,57 +6,61 @@ This repository is the sourcing session: one search, refined in place, with no a
 
 The business steps and the request path are written up in [DOCUMENTATION.md](DOCUMENTATION.md).
 
-## Requirements
+## Setup
 
-- Python 3.11 or newer
-- Node.js 20 or newer
-- An OpenAI API key from [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+Use the **Development** branch. `master` does not contain the app.
 
-A ChatGPT subscription is not this key. The app calls `gpt-5.6-luna` with reasoning off, and falls back to `gpt-5.6-terra` if Luna is unavailable.
+You need Docker with Compose, Node.js 20 or newer, and an OpenAI API key from [platform.openai.com/api-keys](https://platform.openai.com/api-keys). A ChatGPT login is not this key. The app calls `gpt-5.6-luna` with reasoning off, and falls back to `gpt-5.6-terra` if Luna is unavailable.
 
-## Run the app
-
-### 1. API key
-
-`backend/.env.example` is committed with a placeholder key. Copy it, then replace the placeholder with your own key. Do not commit `backend/.env`.
+### 1. Clone and switch branch
 
 ```bash
-cd backend
-cp .env.example .env
+git clone https://github.com/Manoj0301/Flexiple---Manoj-M.git
+cd Flexiple---Manoj-M
+git switch Development
 ```
 
-Open `backend/.env` and change this line:
+### 2. Add your API key
+
+`backend/.env.example` is committed with a placeholder. Copy it and replace the placeholder. Do not commit `backend/.env`.
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+Open `backend/.env` and replace:
 
 ```bash
 OPENAI_API_KEY=sk-your-openai-api-key
 ```
 
-to your real key:
+with your own key:
 
 ```bash
 OPENAI_API_KEY=sk-...your key...
 ```
 
-Save the file before you start the API. If you change the key later, restart the API process.
+### 3. Start the backend
 
-### 2. Backend
-
-From the `backend` directory:
+Port **8001** must be free. From the repository root:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8001
+docker compose up --build
 ```
 
-On Windows, activate the virtual environment with `.venv\Scripts\activate`.
+This builds the API image and starts it on http://127.0.0.1:8001. The container reads `OPENAI_API_KEY` from `backend/.env`. Leave this terminal running.
 
-Leave this terminal running. The API listens on http://127.0.0.1:8001.
+If you change the key, recreate the container:
 
-### 3. Frontend
+```bash
+docker compose up --build --force-recreate
+```
 
-In a second terminal, from the repository root:
+Stop with Ctrl+C, then `docker compose down`.
+
+### 4. Start the frontend
+
+In a second terminal, from the repository root. Port **5173** must be free.
 
 ```bash
 cd frontend
@@ -64,9 +68,9 @@ npm install
 npm run dev
 ```
 
-Open http://127.0.0.1:5173. The Vite server proxies `/api` to port 8001. If port 5173 is already taken, Vite prints the port it used. Open that URL instead.
+Open http://127.0.0.1:5173. Vite proxies `/api` to the backend on port 8001.
 
-### 4. Use it
+### 5. Use it
 
 1. Leave the sample brief, or write your own, and choose **Run search**.
 2. Review the filters, the fit rubric, and the ranked cards.
@@ -76,13 +80,13 @@ Open http://127.0.0.1:5173. The Vite server proxies `/api` to port 8001. If port
 
 ## Tests
 
-From `backend`, with the virtual environment active:
+From the repository root:
 
 ```bash
-pytest
+docker compose run --rm backend pytest
 ```
 
-Tests use a fake model. They do not call OpenAI and do not need a real key.
+Tests use a fake model. They do not call OpenAI. `backend/.env` must still exist, because Compose reads that file when the container starts.
 
 ## Decisions
 
